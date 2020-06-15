@@ -69,8 +69,12 @@ layui.define(['laytpl', 'layer'], function(exports){
     options.headers = options.headers || {};
     
     if(request.tokenName){
+      var sendData = typeof options.data === 'string' 
+        ? JSON.parse(options.data) 
+      : options.data;
+
       //自动给参数传入默认 token
-      options.data[request.tokenName] = request.tokenName in options.data 
+      options.data[request.tokenName] = request.tokenName in sendData
         ?  options.data[request.tokenName]
       : (layui.data(setter.tableName)[request.tokenName] || '');
       
@@ -101,22 +105,22 @@ layui.define(['laytpl', 'layer'], function(exports){
         
         //其它异常
         else {
-          var error = [
+          var errorText = [
             '<cite>Error：</cite> ' + (res[response.msgName] || '返回状态码异常')
             ,debug()
           ].join('');
-          view.error(error);
+          view.error(errorText);
         }
         
         //只要 http 状态码正常，无论 response 的 code 是否正常都执行 success
         typeof success === 'function' && success(res);
       }
       ,error: function(e, code){
-        var error = [
+        var errorText = [
           '请求异常，请重试<br><cite>错误信息：</cite>'+ code 
           ,debug()
         ].join('');
-        view.error(error);
+        view.error(errorText);
         
         typeof error === 'function' && error(res);
       }
@@ -233,16 +237,16 @@ layui.define(['laytpl', 'layer'], function(exports){
     ,elem = isScriptTpl ? html : $(html)
     ,elemTemp = isScriptTpl ? html : elem.find('*[template]')
     ,fn = function(options){
-      var tpl = laytpl(options.dataElem.html());
-      
-      options.dataElem.after(tpl.render($.extend({
+      var tpl = laytpl(options.dataElem.html())
+      ,res = $.extend({
         params: router.params
-      }, options.res)));
-
-      typeof callback === 'function' && callback();
+      }, options.res);
       
+      options.dataElem.after(tpl.render(res));
+      typeof callback === 'function' && callback();
+
       try {
-        options.done && new Function('d', options.done)(options.res);
+        options.done && new Function('d', options.done)(res);
       } catch(e){
         console.error(options.dataElem[0], '\n存在错误回调脚本\n\n', e)
       }

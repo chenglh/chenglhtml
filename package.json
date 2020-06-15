@@ -1,12 +1,12 @@
 {
   "name": "layuiAdmin.pro",
-  "version": "1.2.1",
+  "version": "1.4.0",
   "description": "通用后台管理模板系统",
   "license": "LPPL",
   "author": [
     "xianxin <xianxin@layui-inc.com>"
   ],
-  "homepage": "http://www.layui.com/admin/",
+  "homepage": "https://www.layui.com/admin/",
   "devDependencies": {
     "chai": "^4.1.1",
     "del": "^2.2.2",

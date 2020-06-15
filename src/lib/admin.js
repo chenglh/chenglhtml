@@ -27,10 +27,45 @@ layui.define('view', function(exports){
 
   //通用方法
   ,admin = {
-    v: '1.2.1 pro'
+    v: '1.4.0 pro'
     
     //数据的异步请求
     ,req: view.req
+    
+    //清除本地 token，并跳转到登入页
+    ,exit: view.exit
+
+    //xss 转义
+    ,escape: function(html){
+      return String(html || '').replace(/&(?!#?[a-zA-Z0-9]+;)/g, '&amp;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+    }
+    
+    //事件监听
+    ,on: function(events, callback){
+      return layui.onevent.call(this, setter.MOD_NAME, events, callback);
+    }
+    
+    //弹出面板
+    ,popup: view.popup
+    
+    //右侧面板
+    ,popupRight: function(options){
+      //layer.close(admin.popup.index);
+      return admin.popup.index = layer.open($.extend({
+        type: 1
+        ,id: 'LAY_adminPopupR'
+        ,anim: -1
+        ,title: false
+        ,closeBtn: false
+        ,offset: 'r'
+        ,shade: 0.1
+        ,shadeClose: true
+        ,skin: 'layui-anim layui-anim-rl layui-layer-adminRight'
+        ,area: '300px'
+      }, options));
+    }
     
     //发送验证码
     ,sendAuthCode: function(options){
@@ -60,7 +95,7 @@ layui.define('view', function(exports){
         }
       };
 
-      $body.on('click', options.elem, function(){
+      $body.off('click', options.elem).on('click', options.elem, function(){
         options.elemPhone = $(options.elemPhone);
         options.elemVercode = $(options.elemVercode);
         
@@ -100,20 +135,17 @@ layui.define('view', function(exports){
     
     //屏幕类型
     ,screen: function(){
-      var width = $win.width()
-      if(width >= 1200){
+      var width = $win.width();
+      if(width > 1200){
         return 3; //大屏幕
-      } else if(width >= 992){
+      } else if(width > 992){
         return 2; //中屏幕
-      } else if(width >= 768){
+      } else if(width > 768){
         return 1; //小屏幕
       } else {
         return 0; //超小屏幕
       }
     }
-    
-    //清除本地 token，并跳转到登入页
-    ,exit: view.exit
     
     //侧边伸缩
     ,sideFlexible: function(status){
@@ -137,7 +169,7 @@ layui.define('view', function(exports){
       } else {
         //切换到搜索状态的 icon，箭头：→
         iconElem.removeClass(ICON_SHRINK).addClass(ICON_SPREAD);
-        
+
         //移动：清除多余选择器恢复默认；PC：从右往左收缩
         if(screen < 2){
           app.removeClass(SIDE_SHRINK);
@@ -153,36 +185,16 @@ layui.define('view', function(exports){
       });
     }
     
-    //xss 转义
-    ,escape: function(html){
-      return String(html || '').replace(/&(?!#?[a-zA-Z0-9]+;)/g, '&amp;')
-      .replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-    }
-    
-    //事件监听
-    ,on: function(events, callback){
-      return layui.onevent.call(this, setter.MOD_NAME, events, callback);
-    }
-    
-    //弹出面板
-    ,popup: view.popup
-    
-    //右侧面板
-    ,popupRight: function(options){
-      //layer.close(admin.popup.index);
-      return admin.popup.index = layer.open($.extend({
-        type: 1
-        ,id: 'LAY_adminPopupR'
-        ,anim: -1
-        ,title: false
-        ,closeBtn: false
-        ,offset: 'r'
-        ,shade: 0.1
-        ,shadeClose: true
-        ,skin: 'layui-anim layui-anim-rl layui-layer-adminRight'
-        ,area: '300px'
-      }, options));
+    //重置主体区域表格尺寸
+    ,resizeTable: function(delay){
+      var that = this, runResizeTable = function(){
+        that.tabsBody(admin.tabsPage.index).find('.layui-table-view').each(function(){
+          var tableID = $(this).attr('lay-id');
+          layui.table.resize(tableID);
+        });
+      };
+      if(!layui.table) return;
+      delay ? setTimeout(runResizeTable, delay) : runResizeTable();
     }
     
     //主题设置
@@ -284,7 +296,14 @@ layui.define('view', function(exports){
     ,resize: function(fn){
       var router = layui.router()
       ,key = router.path.join('-');
-      $win.off('resize', admin.resizeFn[key]);
+      
+      if(admin.resizeFn[key]){
+        $win.off('resize', admin.resizeFn[key]);
+        delete admin.resizeFn[key];
+      }
+      
+      if(fn === 'off') return; //如果是清除 resize 事件，则终止往下执行
+      
       fn(), admin.resizeFn[key] = fn;
       $win.on('resize', admin.resizeFn[key]);
     }
@@ -295,19 +314,7 @@ layui.define('view', function(exports){
       admin.resizeFn[key] && admin.resizeFn[key]();
     }
     ,delResize: function(){
-      var router = layui.router()
-      ,key = router.path.join('-');
-      $win.off('resize', admin.resizeFn[key])
-      delete admin.resizeFn[key];
-    }
-    
-    //纠正路由格式
-    ,correctRouter: function(href){
-      if(!/^\//.test(href)) href = '/' + href;
-      
-      //纠正首尾
-      return href.replace(/^(\/+)/, '/')
-      .replace(new RegExp('\/' + setter.entry + '$'), '/'); //过滤路由最后的默认视图文件名（如：index）
+      this.resize('off');
     }
     
     //关闭当前 pageTabs
@@ -315,7 +322,6 @@ layui.define('view', function(exports){
       if(!admin.tabsPage.index) return;
       $(TABS_HEADER).eq(admin.tabsPage.index).find('.layui-tab-close').trigger('click');
     }
-    
     
     //全屏
     ,fullScreen: function(){
@@ -327,7 +333,6 @@ layui.define('view', function(exports){
       };
     }
     
-    
     //退出全屏
     ,exitScreen: function(){
       var ele = document.documentElement
@@ -338,8 +343,17 @@ layui.define('view', function(exports){
       } else if (document.webkitCancelFullScreen) {  
         document.webkitCancelFullScreen();  
       } else if (document.msExitFullscreen) {  
-        document.msExitFullscreen();  
+        document.msExitFullscreen();
       }
+    }
+    
+    //纠正单页路由格式
+    ,correctRouter: function(href){
+      if(!/^\//.test(href)) href = '/' + href;
+      
+      //纠正首尾
+      return href.replace(/^(\/+)/, '/')
+      .replace(new RegExp('\/' + setter.entry + '$'), '/'); //过滤路由最后的默认视图文件名（如：index）
     }
     
     //……
@@ -351,7 +365,8 @@ layui.define('view', function(exports){
     flexible: function(othis){
       var iconElem = othis.find('#'+ APP_FLEXIBLE)
       ,isSpread = iconElem.hasClass(ICON_SPREAD);
-      admin.sideFlexible(isSpread ? 'spread' : null);
+      admin.sideFlexible(isSpread ? 'spread' : null); //控制伸缩
+      admin.resizeTable(350);
     }
     
     //刷新
@@ -593,6 +608,54 @@ layui.define('view', function(exports){
     ,shade: function(){
       admin.sideFlexible();
     }
+    
+    //检查更新
+    ,update: function(){
+      $.ajax({
+        type: 'get',
+        dataType: 'jsonp',
+        data: {
+          name: 'layuiAdmin'
+          ,version: admin.v
+        },
+        url: 'https://fly.layui.com/api/product_update/',
+        success: function(res){
+          if(res.status === 0) {
+            if(res.version === admin.v.replace(/\s|pro|std/g, '')){
+              layer.alert('当前版本已经是最新版本');
+            } else {
+              layer.alert('检查到更新，是否前往下载？', {
+                btn: ['更新', '暂不']
+              }, function(index){
+                layer.close(index);
+                layer.open({
+                  type: 2
+                  ,content: 'https://fly.layui.com/user/product/'
+                  ,area: ['100%', '100%']
+                  ,title: '检查更新'
+                });
+              });
+            }
+          } else if(res.status == 1){
+            layer.alert(res.msg, {
+              btn: ['登入', '暂不']
+            }, function(index){
+              layer.close(index);
+              layer.open({
+                type: 2
+                ,content: 'https://fly.layui.com/user/login/'
+                ,area: ['100%', '100%']
+                ,title: '检查更新'
+              });
+            });
+          } else {
+            layer.msg(res.msg || res.code, {shift: 6});
+          }
+        }, error: function(e){
+          layer.msg('请求异常，请重试', {shift: 6});
+        }
+      });
+    }
   };
   
   //初始
@@ -721,9 +784,9 @@ layui.define('view', function(exports){
     var layid = othis.attr('lay-id')
     ,attr = othis.attr('lay-attr')
     ,index = othis.index();
-    
+
+    location.hash = layid === setter.entry ? '/' : (attr || '/');
     admin.tabsBodyChange(index);
-    location.hash = layid === setter.entry ? '/' : attr;
   }
   ,TABS_HEADER = '#LAY_app_tabsheader>li';
   
@@ -740,11 +803,10 @@ layui.define('view', function(exports){
       return admin.tabsBodyChange(index);
     };
     
-    //单页标签页
-    setThisRouter(othis);
     
-    //执行resize事件，如果存在的话
-    admin.runResize();
+    setThisRouter(othis); //同步路由
+    admin.runResize(); //执行resize事件，如果存在的话
+    admin.resizeTable(); //重置当前主体区域的表格尺寸
   });
   
   //监听 tabspage 删除
@@ -769,6 +831,11 @@ layui.define('view', function(exports){
 
     //执行跳转
     location.hash = admin.correctRouter(href);
+    
+    //如果为当前页，则执行刷新
+    if(admin.correctRouter(href) === router.href){
+      admin.events.refresh();
+    }
   });
   
   //点击事件

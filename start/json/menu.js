@@ -199,6 +199,12 @@
         ,"title": "功能演示二"
       }]
     }, {
+      "name": "transfer"
+      ,"title": "穿梭框"
+    }, {
+      "name": "tree"
+      ,"title": "树形组件"
+    }, {
       "name": "colorpicker"
       ,"title": "颜色选择器"
     }, {

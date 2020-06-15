@@ -93,7 +93,7 @@ gulp.task('mincss', task.mincss);
 gulp.task('mv', task.mv);
 
 gulp.task('src', function(){ //命令：gulp src
-  return gulp.src('./dev-pro/**/*')
+  return gulp.src('./dev-src/**/*')
   .pipe(gulp.dest('./src'));
 });
 
@@ -124,7 +124,7 @@ gulp.task('release', function(){ //命令：gulp && gulp release
   gulp.src('./dev/index.html')
     .pipe(replace(/\<\!-- clear s --\>([\s\S]*?)\<\!-- clear e --\>/, ''))
     .pipe(replace('//local.res.layui.com/layui/src', 'layui'))
-    .pipe(replace("base: '../dev-pro/'", "base: '../dist/'"))
+    .pipe(replace("base: '../dev-src/'", "base: '../dist/'"))
     .pipe(replace('@@version@@', pkg.version))
   .pipe(gulp.dest('./start'))
   .pipe(gulp.dest(releaseDir + '/start'));
